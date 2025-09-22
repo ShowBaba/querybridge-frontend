@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --primary-color: #ea2a33;
+    --secondary-color: #fef0f0;
+    --background-color: #ffffff;
+    --text-primary: #1a1a1a;
+    --text-secondary: #4d4d4d;
+    --accent-color: #ffcccc;
+  }
+
+  html {
+    font-family: 'Plus Jakarta Sans', 'Noto Sans', system-ui, sans-serif;
+  }
+
+  .material-symbols-outlined {
+    font-variation-settings:
+      'FILL' 0,
+      'wght' 400,
+      'GRAD' 0,
+      'opsz' 24;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply px-4 py-2 rounded-md font-medium transition-colors;
+  }
+
+  .btn-primary {
+    @apply bg-blue-600 text-white hover:bg-blue-700;
+  }
+
+  .btn-secondary {
+    @apply bg-gray-200 text-gray-900 hover:bg-gray-300;
+  }
+}
