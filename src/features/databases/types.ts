@@ -2,6 +2,7 @@ export type Database = {
   id: string
   name: string
   db_engine: string
+  ssl_mode: string
   host: string
   port: number | null
   database: string

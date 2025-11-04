@@ -6,6 +6,9 @@ import { Toaster } from 'react-hot-toast'
 import App from './App'
 import { queryClient } from './app/queryClient'
 import './index.css'
+import { scheduleAutoLogout } from './lib/auth'
+
+scheduleAutoLogout()
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

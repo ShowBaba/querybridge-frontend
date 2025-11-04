@@ -14,6 +14,8 @@ export function SignUp() {
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [passwordStrength, setPasswordStrength] = useState(0)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   const signUpMutation = useSignUp()
 
@@ -87,13 +89,10 @@ export function SignUp() {
         },
         {
           onSuccess: (response) => {
-            console.log("response; ", response)
-            // Hook will navigate only when (response.status === 200 && response.data.status === 200)
-            // We can optimistically toast here.
+            console.log('response; ', response)
             if (response?.status === 200 && response?.data?.status === 200) {
               toast.success('Account created successfully. Redirecting to sign in…')
             } else {
-              // Body/status mismatch treated as failure UX-wise.
               const msg = response?.data?.message || 'Failed to create account'
               toast.error(msg)
             }
@@ -117,7 +116,7 @@ export function SignUp() {
       <div className="w-full max-w-lg px-4">
         <div className="mb-8 text-center">
           <Link className="flex items-center justify-center gap-2" to="/">
-            <svg className="h-8 w-8 text-indigo-600" fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+            <svg className="h-8 w-8 text-[#ec1313]" fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
               <path d="M4 4H17.3334V17.3334H30.6666V30.6666H44V44H4V4Z" fill="currentColor"></path>
             </svg>
             <span className="text-2xl font-bold tracking-tight text-gray-900">QueryBridge</span>
@@ -132,7 +131,7 @@ export function SignUp() {
               <div className="mt-1.5">
                 <input
                   autoComplete="given-name"
-                  className="block w-full rounded-lg border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  className="block w-full rounded-lg border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-[#ec1313] focus:ring-[#ec1313]"
                   id="firstname"
                   name="firstname"
                   placeholder="John"
@@ -150,7 +149,7 @@ export function SignUp() {
               <div className="mt-1.5">
                 <input
                   autoComplete="family-name"
-                  className="block w-full rounded-lg border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  className="block w-full rounded-lg border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-[#ec1313] focus:ring-[#ec1313]"
                   id="lastname"
                   name="lastname"
                   placeholder="Doe"
@@ -168,7 +167,7 @@ export function SignUp() {
               <div className="mt-1.5">
                 <input
                   autoComplete="email"
-                  className="block w-full rounded-lg border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  className="block w-full rounded-lg border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-[#ec1313] focus:ring-[#ec1313]"
                   id="email"
                   name="email"
                   placeholder="you@example.com"
@@ -181,13 +180,14 @@ export function SignUp() {
               </div>
             </div>
 
-            <div className="relative">
+            {/* PASSWORD */}
+            <div>
               <div className="flex items-center justify-between">
                 <label className="block text-sm font-medium text-gray-900" htmlFor="password">Password</label>
                 <div className="group relative">
                   <button className="text-gray-400 hover:text-gray-600" type="button" aria-label="Password requirements">
-                    <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                      <path clipRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" fillRule="evenodd"></path>
+                    <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                      <path clipRule="evenodd" fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" />
                     </svg>
                   </button>
                   <div className="absolute bottom-full right-0 mb-2 hidden w-64 rounded-lg bg-gray-800 p-3 text-xs text-white shadow-lg group-hover:block z-10">
@@ -201,27 +201,47 @@ export function SignUp() {
                   </div>
                 </div>
               </div>
-              <div className="mt-1.5">
+              <div className="mt-1.5 relative">
                 <input
                   autoComplete="new-password"
-                  className="block w-full rounded-lg border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  className="block w-full rounded-lg border-gray-300 bg-white px-4 py-2.5 pr-10 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-[#ec1313] focus:ring-[#ec1313]"
                   id="password"
                   name="password"
                   placeholder="••••••••"
                   required
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   value={formData.password}
                   onChange={handleInputChange}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(p => !p)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? (
+                    // eye-off
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3l18 18M9.88 9.88A3 3 0 0112 9c1.657 0 3 1.343 3 3 0 .734-.264 1.405-.7 1.92M6.228 6.228C4.206 7.63 2.999 9.5 2.999 9.5S6.75 17 14.25 17c1.4 0 2.69-.28 3.847-.757M12 5c7.5 0 11.25 7.5 11.25 7.5a18.55 18.55 0 01-2.733 3.487" />
+                    </svg>
+                  ) : (
+                    // eye
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.5c7.5 0 11.25 7.5 11.25 7.5S19.5 19.5 12 19.5.75 12 12 4.5z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                  )}
+                </button>
               </div>
               <div className="mt-2 space-y-1">
                 <div className="flex w-full h-1.5 gap-1.5">
                   {[1, 2, 3, 4].map((bar) => (
                     <div
                       key={bar}
-                      className={`h-full rounded-full flex-1 bg-gray-200 transition-colors ${bar <= passwordStrength ? 'bg-red-500' : ''
-                        } ${bar <= passwordStrength && passwordStrength >= 3 ? 'bg-yellow-500' : ''} ${bar <= passwordStrength && passwordStrength >= 4 ? 'bg-green-500' : ''
-                        }`}
+                      className={`h-full rounded-full flex-1 bg-gray-200 transition-colors
+                        ${bar <= passwordStrength ? 'bg-red-500' : ''}
+                        ${bar <= passwordStrength && passwordStrength >= 3 ? 'bg-yellow-500' : ''}
+                        ${bar <= passwordStrength && passwordStrength >= 4 ? 'bg-green-500' : ''}`}
                     />
                   ))}
                 </div>
@@ -235,28 +255,48 @@ export function SignUp() {
               {errors.password && <p className="mt-1 text-sm text-red-600">{errors.password}</p>}
             </div>
 
+            {/* CONFIRM PASSWORD */}
             <div>
               <label className="block text-sm font-medium text-gray-900" htmlFor="confirm-password">Confirm Password</label>
-              <div className="mt-1.5">
+              <div className="mt-1.5 relative">
                 <input
                   autoComplete="new-password"
-                  className="block w-full rounded-lg border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  className="block w-full rounded-lg border-gray-300 bg-white px-4 py-2.5 pr-10 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-[#ec1313] focus:ring-[#ec1313]"
                   id="confirm-password"
                   name="confirmPassword"
                   placeholder="••••••••"
                   required
-                  type="password"
+                  type={showConfirmPassword ? 'text' : 'password'}
                   value={formData.confirmPassword}
                   onChange={handleInputChange}
                 />
-                {errors.confirmPassword && <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>}
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(p => !p)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
+                  aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                >
+                  {showConfirmPassword ? (
+                    // eye-off
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3l18 18M9.88 9.88A3 3 0 0112 9c1.657 0 3 1.343 3 3 0 .734-.264 1.405-.7 1.92M6.228 6.228C4.206 7.63 2.999 9.5 2.999 9.5S6.75 17 14.25 17c1.4 0 2.69-.28 3.847-.757M12 5c7.5 0 11.25 7.5 11.25 7.5a18.55 18.55 0 01-2.733 3.487" />
+                    </svg>
+                  ) : (
+                    // eye
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.5c7.5 0 11.25 7.5 11.25 7.5S19.5 19.5 12 19.5.75 12 12 4.5z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                  )}
+                </button>
               </div>
+              {errors.confirmPassword && <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>}
             </div>
 
             <div className="flex items-start">
               <div className="flex h-5 items-center">
                 <input
-                  className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                  className="h-4 w-4 rounded border-gray-300 text-[#ec1313] focus:ring-[#ec1313]"
                   id="terms-and-privacy"
                   name="termsAccepted"
                   type="checkbox"
@@ -266,8 +306,8 @@ export function SignUp() {
               </div>
               <div className="ml-3 text-sm">
                 <label className="text-gray-600" htmlFor="terms-and-privacy">
-                  I agree to the <a className="font-medium text-indigo-600 hover:underline" href="#">Terms</a> and{' '}
-                  <a className="font-medium text-indigo-600 hover:underline" href="#">Privacy Policy</a>.
+                  I agree to the <a className="font-medium text-[#ec1313] hover:underline" href="#">Terms</a> and{' '}
+                  <a className="font-medium text-[#ec1313] hover:underline" href="#">Privacy Policy</a>.
                 </label>
               </div>
             </div>
@@ -275,7 +315,7 @@ export function SignUp() {
 
             <div>
               <button
-                className="flex w-full justify-center rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors duration-200 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex w-full justify-center rounded-lg bg-[#ec1313] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors duration-200 hover:bg-[#ec1313]/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#ec1313] disabled:opacity-50 disabled:cursor-not-allowed"
                 type="submit"
                 disabled={signUpMutation.isPending}
               >
@@ -287,7 +327,7 @@ export function SignUp() {
 
         <p className="mt-6 text-center text-sm text-gray-600">
           Already have an account?
-          <Link className="font-semibold text-indigo-600 hover:underline ml-1" to="/signin">
+          <Link className="font-semibold text-[#ec1313] hover:underline ml-1" to="/signin">
             Sign in
           </Link>
         </p>

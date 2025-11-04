@@ -1,0 +1,664 @@
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import {
+  fetchAllUserDatabasesPage,
+  searchAllUserDatabases,
+  fetchUserApplications,
+  fetchEndpointsForApp,
+  deleteDatabase,
+  testDatabaseConnectivity,
+} from '../api'
+import { DatabaseFormModal } from '../components/DatabaseFormModal'
+import { useToast } from '@/components/ui/Toast'
+import { getPaginationInfo } from '@/lib/utils'
+import { formatDate, engineLabel } from '../utils'
+import type { Endpoint } from '../types'
+
+const PAGE_SIZE = 10
+
+type Row = {
+  id: string
+  name: string
+  db_engine: string
+  application_id: string
+  created_at: string
+}
+
+export default function DatabaseList() {
+  const [databases, setDatabases] = useState<Row[]>([])
+  const [totalCount, setTotalCount] = useState(0)
+  const [offset, setOffset] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+
+  const [apps, setApps] = useState<Array<{ id: string; name: string }>>([])
+
+  const [statusMap, setStatusMap] = useState<Record<string, 'checking' | 'up' | 'down' | 'error'>>({})
+  const [endpointsByApp, setEndpointsByApp] = useState<Record<string, Endpoint[]>>({})
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+  const [menuCoords, setMenuCoords] = useState<{ top: number; right: number } | null>(null)
+  const menuRef = useRef<HTMLDivElement | null>(null)
+
+  const [confirmDb, setConfirmDb] = useState<Row | null>(null)
+  const [removing, setRemoving] = useState(false)
+
+  const [searchTerm, setSearchTerm] = useState('')
+  const [typingTimeout, setTypingTimeout] = useState<NodeJS.Timeout | null>(null)
+
+  const [chooseAppOpen, setChooseAppOpen] = useState(false)
+  const [createModalOpen, setCreateModalOpen] = useState(false)
+  const [createAppId, setCreateAppId] = useState<string>('')
+
+  const [filterOpen, setFilterOpen] = useState(false)
+  const [filterApp, setFilterApp] = useState<string>('all')
+  const [filterEngine, setFilterEngine] = useState<string>('all')
+
+  const filterCardRef = useRef<HTMLDivElement | null>(null)
+
+  const navigate = useNavigate()
+  const { success, error } = useToast()
+
+  const engineOptions = useMemo(() => {
+    const s = new Set(databases.map(d => d.db_engine).filter(Boolean))
+    return Array.from(s)
+  }, [databases])
+
+  const visibleRows = useMemo(() => {
+    return databases.filter(d => {
+      const byApp = filterApp === 'all' ? true : d.application_id === filterApp
+      const byEngine = filterEngine === 'all' ? true : d.db_engine === filterEngine
+      return byApp && byEngine
+    })
+  }, [databases, filterApp, filterEngine])
+
+  useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      if (openMenuId && menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpenMenuId(null); setMenuCoords(null)
+      }
+    }
+    document.addEventListener('mousedown', onDocClick)
+    return () => document.removeEventListener('mousedown', onDocClick)
+  }, [openMenuId])
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setFilterOpen(false)
+    }
+    function onDown(e: MouseEvent) {
+      const t = e.target as Node
+      if (filterOpen && filterCardRef.current && !filterCardRef.current.contains(t)) setFilterOpen(false)
+    }
+    document.addEventListener('keydown', onKey)
+    document.addEventListener('mousedown', onDown)
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.removeEventListener('mousedown', onDown)
+    }
+  }, [filterOpen])
+
+  useEffect(() => { load() }, [offset])
+
+  useEffect(() => {
+    if (typingTimeout) clearTimeout(typingTimeout)
+    const timeout = setTimeout(async () => {
+      if (!searchTerm.trim()) {
+        await load()
+        return
+      }
+      try {
+        setLoading(true)
+        const res = await searchAllUserDatabases(searchTerm.trim())
+        setDatabases(res.data.databases.nodes)
+        setTotalCount(res.data.databases.totalCount)
+        await hydratePage(res.data.databases.nodes)
+      } catch (e) {
+        setLoadError(e instanceof Error ? e.message : 'Failed to search databases')
+      } finally {
+        setLoading(false)
+      }
+    }, 400)
+    setTypingTimeout(timeout)
+  }, [searchTerm])
+
+  useEffect(() => {
+    if (offset >= totalCount && totalCount > 0) {
+      setOffset(Math.max(0, Math.floor((totalCount - 1) / PAGE_SIZE) * PAGE_SIZE))
+    }
+  }, [totalCount])
+
+  const load = async () => {
+    try {
+      setLoading(true)
+      setLoadError(null)
+
+      const [pageRes, appsRes] = await Promise.all([
+        fetchAllUserDatabasesPage({ limit: PAGE_SIZE, offset }),
+        fetchUserApplications(),
+      ])
+
+      const rows = pageRes.data.databases.nodes
+      setDatabases(rows)
+      setTotalCount(pageRes.data.databases.totalCount)
+      setApps(appsRes.data.applications.nodes)
+
+      await hydratePage(rows)
+    } catch (e) {
+      setLoadError(e instanceof Error ? e.message : 'Failed to load databases')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function hydratePage(rows: Row[]) {
+    const uniqAppIds = Array.from(new Set(rows.map(r => r.application_id))).filter(Boolean)
+    const endpointsMap: Record<string, Endpoint[]> = {}
+    await Promise.all(
+      uniqAppIds.map(async (appId) => {
+        const epRes = await fetchEndpointsForApp(appId)
+        endpointsMap[appId] = epRes.data.endpoints.nodes
+      })
+    )
+    setEndpointsByApp(endpointsMap)
+
+    const next: Record<string, 'checking' | 'up' | 'down' | 'error'> = {}
+    rows.forEach(d => { next[d.id] = 'checking' })
+    setStatusMap(next)
+
+    await Promise.all(rows.map(async (d) => {
+      try {
+        const ok = await testDatabaseConnectivity(d.id)
+        setStatusMap(prev => ({ ...prev, [d.id]: ok ? 'up' : 'down' }))
+      } catch {
+        setStatusMap(prev => ({ ...prev, [d.id]: 'error' }))
+      }
+    }))
+  }
+
+  const getEndpointCount = (databaseId: string, appId: string) =>
+    (endpointsByApp[appId] || []).filter(ep => ep.database_id === databaseId).length
+
+  const paginationInfo = useMemo(
+    () => getPaginationInfo(offset, PAGE_SIZE, totalCount, databases.length),
+    [offset, totalCount, databases.length]
+  )
+
+  const handlePrevious = () => { if (offset > 0) setOffset(Math.max(0, offset - PAGE_SIZE)) }
+  const handleNext = () => { if (offset + PAGE_SIZE < totalCount) setOffset(offset + PAGE_SIZE) }
+
+  const handleRemove = async (db: Row) => {
+    setRemoving(true)
+    try {
+      await deleteDatabase(db.id)
+      success('Database removed')
+      await load()
+      setConfirmDb(null)
+    } catch {
+      error('Failed to remove database')
+    } finally {
+      setRemoving(false)
+    }
+  }
+
+  if (loading && databases.length === 0) {
+    return (
+      <div className="max-w-7xl mx-auto px-10 py-8 w/full">
+        <div className="h-8 w-64 bg-gray-200 rounded animate-pulse mb-6" />
+        <div className="h-48 w-full bg-gray-100 rounded animate-pulse" />
+      </div>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <div className="max-w-7xl mx-auto px-10 py-8 w/full">
+        <div className="bg-red-50 border border-red-200 rounded p-4">
+          <div className="text-sm text-red-700">{loadError}</div>
+        </div>
+      </div>
+    )
+  }
+
+  const hasSearch = !!searchTerm.trim()
+  const hasFilters = filterApp !== 'all' || filterEngine !== 'all'
+
+  return (
+    <div className="max-w-7xl mx-auto">
+      <header className="flex items-center justify-between border-b border-gray-200 px-10 py-4">
+        <div className="flex items-center gap-4">
+          <h2 className="text-2xl font-bold text-[#1a1a1a]">Databases</h2>
+        </div>
+
+        <div className="flex items-center gap-4">
+          <div className="relative">
+            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+              <svg aria-hidden="true" className="h-5 w-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                <path clipRule="evenodd" fillRule="evenodd"
+                  d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 0 1 2 9z" />
+              </svg>
+            </div>
+            <input
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search databases…"
+              className="block w-64 md:w-80 px-4 py-2 border border-[#fef0f0] rounded-lg bg-gray-50 text-[#1a1a1a] placeholder-[#4d4d4d]
+                 focus:outline-none focus:ring-2 focus:ring-[#ea2a33] focus:border-[#ea2a33] transition ease-in-out duration-150 pl-10"
+              type="text"
+            />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm('')}
+                className="absolute inset-y-0 right-2 my-auto h-7 w-7 rounded hover:bg-gray-200 text-gray-500 flex items-center justify-center"
+                aria-label="Clear search"
+                title="Clear"
+              >
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                  <path d="M12 10.586l4.95-4.95 1.414 1.414L13.414 12l4.95 4.95-1.414 1.414L12 13.414l-4.95 4.95-1.414-1.414L10.586 12l-4.95-4.95 1.414-1.414z" />
+                </svg>
+              </button>
+            )}
+          </div>
+
+          <button
+            type="button"
+            className="p-2.5 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 text-[var(--text-secondary)]"
+            aria-label="Filter databases"
+            onClick={() => setFilterOpen(true)}
+          >
+            <svg fill="currentColor" height="20px" width="20px" viewBox="0 0 256 256">
+              <path d="M230.6,49.53A15.81,15.81,0,0,0,216,40H40A16,16,0,0,0,28.19,66.76l.08.09L96,139.17V216a16,16,0,0,0,24.87,13.32l32-21.34A16,16,0,0,0,160,194.66V139.17l67.74-72.32.08-.09A15.8,15.8,0,0,0,230.6,49.53ZM40,56h0Zm108.34,72.28A15.92,15.92,0,0,0,144,139.17v55.49L112,216V139.17a15.92,15.92,0,0,0-4.32-10.94L40,56H216Z" />
+            </svg>
+          </button>
+
+          <button
+            type="button"
+            className="bg-[#ea2a33] text-white px-6 py-3 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-[#ea2a33] focus:ring-opacity-50 transition ease-in-out duration-150 flex items-center gap-2"
+            onClick={() => setChooseAppOpen(true)}
+          >
+            <svg fill="currentColor" height="20" viewBox="0 0 256 256" width="20">
+              <path d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z" />
+            </svg>
+            <span>Add Database</span>
+          </button>
+        </div>
+      </header>
+
+      {/* >>> This wrapper is what matches EndpointList spacing <<< */}
+      <div className="p-8">
+        {!loading && visibleRows.length === 0 ? (
+          <div className="px-0 py-16">
+            <div className="flex items-center justify-center">
+              <div className="text-center max-w-md">
+                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
+                  <svg width="24" height="24" viewBox="0 0 24 24" className="text-gray-500" fill="currentColor" aria-hidden="true">
+                    <path d="M20 5H4a2 2 0 0 0-2 2v7a4 4 0 0 0 4 4h7a5 5 0 0 0 5-5V7a2 2 0 0 0-2-2Zm0 9a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V7h17v7ZM7 9h7v2H7V9Zm0 4h5v2H7v-2Z" />
+                  </svg>
+                </div>
+
+                <h3 className="text-lg font-semibold text-[#1a1a1a]">
+                  {hasSearch || hasFilters ? <>No results found</> : 'No databases yet'}
+                </h3>
+
+                <p className="mt-2 text-sm text-[#4d4d4d]">
+                  {hasSearch || hasFilters
+                    ? 'Try adjusting your search or reset filters to see more databases.'
+                    : 'Create your first database to get started.'}
+                </p>
+
+                <div className="mt-4 flex items-center justify-center gap-2">
+                  {hasSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchTerm('')}
+                      className="px-3 py-1.5 rounded-md border border-slate-300 bg-white text-sm font-medium text-slate-700 hover:bg-slate-50"
+                    >
+                      Clear search
+                    </button>
+                  )}
+                  {hasFilters && (
+                    <button
+                      type="button"
+                      onClick={() => { setFilterApp('all'); setFilterEngine('all') }}
+                      className="px-3 py-1.5 rounded-md border border-slate-300 bg-white text-sm font-medium text-slate-700 hover:bg-slate-50"
+                    >
+                      Reset filters
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setChooseAppOpen(true)}
+                    className="inline-flex items-center gap-2 rounded-md border border-transparent bg-[#ea2a33] px-3 py-1.5 text-sm font-semibold text-white hover:bg-red-700"
+                  >
+                    <svg fill="currentColor" width="16" height="16" viewBox="0 0 256 256" aria-hidden="true">
+                      <path d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z" />
+                    </svg>
+                    Add Database
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="overflow-x-auto bg-white rounded-xl shadow-sm border border-slate-200">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 text-slate-500">
+                  <tr>
+                    <th className="px-6 py-4 text-left font-medium">Name</th>
+                    <th className="px-6 py-4 text-left font-medium">Engine</th>
+                    <th className="px-6 py-4 text-left font-medium">Status</th>
+                    <th className="px-6 py-4 text-left font-medium">Endpoints</th>
+                    <th className="px-6 py-4 text-left font-medium">App</th>
+                    <th className="px-6 py-4 text-left font-medium">Created</th>
+                    <th className="px-6 py-4 text-left font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleRows.map((database, idx) => {
+                    const rowStatus = statusMap[database.id] ?? 'checking'
+                    const appName = apps.find(a => a.id === database.application_id)?.name || database.application_id
+
+                    const StatusBadge = () => {
+                      if (rowStatus === 'checking') return <span className="inline-block h-3 w-20 bg-gray-200 rounded animate-pulse" />
+                      if (rowStatus === 'up') return (
+                        <span className="inline-flex items-center gap-1 rounded-md bg-green-50 text-green-700 border border-green-200 px-2 py-0.5">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2l-3.5-3.5-1.4 1.4L9 19 20.3 7.7l-1.4-1.4z" /></svg>
+                          Connected
+                        </span>
+                      )
+                      if (rowStatus === 'down') return (
+                        <span className="inline-flex items-center gap-1 rounded-md bg-red-50 text-red-700 border border-red-200 px-2 py-0.5">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 10.586l4.95-4.95 1.414 1.414L13.414 12l4.95 4.95-1.414 1.414L12 13.414l-4.95 4.95-1.414-1.414L10.586 12l-4.95-4.95 1.414-1.414z" /></svg>
+                          Unreachable
+                        </span>
+                      )
+                      return (
+                        <span className="inline-flex items-center gap-1 rounded-md bg-yellow-50 text-yellow-700 border border-yellow-200 px-2 py-0.5">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" /></svg>
+                          Error
+                        </span>
+                      )
+                    }
+
+                    return (
+                      <tr
+                        key={database.id}
+                        role="button"
+                        tabIndex={0}
+                        className="border-t border-slate-200 hover:bg-slate-50 cursor-pointer"
+                        onClick={() => navigate(`/applications/${database.application_id}/databases/${database.id}`)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            navigate(`/applications/${database.application_id}/databases/${database.id}`)
+                          }
+                        }}
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap font-medium text-[var(--text-primary)]">{database.name}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-[var(--text-secondary)]">{engineLabel(database.db_engine)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap"><StatusBadge /></td>
+                        <td className="px-6 py-4 whitespace-nowrap text-[var(--text-secondary)]">
+                          {getEndpointCount(database.id, database.application_id)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <Link
+                            to={`/applications/${database.application_id}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-[#ec1313] hover:underline"
+                          >
+                            {appName}
+                          </Link>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-[var(--text-secondary)]">{formatDate(database.created_at)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="relative" ref={openMenuId === database.id ? menuRef : null}>
+                            <button
+                              type="button"
+                              aria-haspopup="menu"
+                              aria-expanded={openMenuId === database.id}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                                setOpenMenuId(prev => {
+                                  const willOpen = prev !== database.id
+                                  setMenuCoords(willOpen ? { top: rect.bottom, right: window.innerWidth - rect.right } : null)
+                                  return willOpen ? database.id : null
+                                })
+                              }}
+                              className="inline-flex items-center justify-center rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-slate-700 hover:bg-slate-50"
+                            >
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="text-slate-600">
+                                <circle cx="5" cy="12" r="2"></circle>
+                                <circle cx="12" cy="12" r="2"></circle>
+                                <circle cx="19" cy="12" r="2"></circle>
+                              </svg>
+                            </button>
+
+                            {openMenuId === database.id && menuCoords && createPortal(
+                              <div
+                                ref={menuRef}
+                                role="menu"
+                                aria-label="Database actions"
+                                className="fixed z-[9999] w-44 rounded-lg border border-slate-200 bg-white shadow-lg overflow-hidden"
+                                style={{
+                                  top: idx >= databases.length - 2 ? menuCoords.top - 8 : menuCoords.top + 8,
+                                  right: menuCoords.right,
+                                  transform: idx >= databases.length - 2 ? 'translateY(-100%)' : 'none',
+                                }}
+                                onClick={(ev) => ev.stopPropagation()}
+                                onMouseDown={(ev) => ev.stopPropagation()}
+                              >
+                                <button
+                                  role="menuitem"
+                                  onClick={() => navigate(`/applications/${database.application_id}/databases/${database.id}`)}
+                                  className="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                                >
+                                  <svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor"><path d="M40,64H216v24H40ZM40,120H216v24H40Zm0,56H216v24H40Z" /></svg>
+                                  View
+                                </button>
+                                <button
+                                  role="menuitem"
+                                  onClick={(e) => { e.stopPropagation(); setOpenMenuId(null); setMenuCoords(null); setConfirmDb(database) }}
+                                  className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+                                >
+                                  <svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor"><path d="M216,56H168V48a16,16,0,0,0-16-16H104A16,16,0,0,0,88,48v8H40a8,8,0,0,0,0,16H48V208a16,16,0,0,0,16,16H192a16,16,0,0,0,16-16V72h8a8,8,0,0,0,0-16ZM104,48h48v8H104Zm88,160H64V72H192Z" /></svg>
+                                  Remove
+                                </button>
+                              </div>,
+                              document.body
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {totalCount > 0 && visibleRows.length > 0 && (
+              <div className="flex items-center justify-between px-6 py-4 border-t border-slate-200 bg-white rounded-b-xl mt-4">
+                <div className="text-sm text-[var(--text-secondary)]">
+                  Showing <span className="font-semibold text-[var(--text-primary)]">{paginationInfo.start}</span> to{' '}
+                  <span className="font-semibold text-[var(--text-primary)]">{paginationInfo.end}</span> of{' '}
+                  <span className="font-semibold text-[var(--text-primary)]">{paginationInfo.total}</span> results
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handlePrevious}
+                    disabled={!paginationInfo.hasPrevious}
+                    className="px-3 py-1.5 rounded-md border border-slate-300 bg-white text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    onClick={handleNext}
+                    disabled={!paginationInfo.hasNext}
+                    className="px-3 py-1.5 rounded-md border border-slate-300 bg-white text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {confirmDb && createPortal(
+        <div className="fixed inset-0 z-[10000]">
+          <div className="absolute inset-0 bg-black/30" onClick={() => !removing && setConfirmDb(null)} />
+          <div className="absolute inset-0 flex items-center justify-center p-4">
+            <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white shadow-xl">
+              <div className="px-6 py-4 border-b border-slate-200">
+                <h3 className="text-lg font-bold text-[#1a1a1a]">Remove database</h3>
+                <p className="mt-1 text-sm text-[#4d4d4d]">
+                  Are you sure you want to remove <span className="font-semibold text-[#1a1a1a]">{confirmDb.name}</span>? This action cannot be undone.
+                </p>
+              </div>
+              <div className="px-6 py-4 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  disabled={removing}
+                  onClick={() => setConfirmDb(null)}
+                  className="px-3 py-1.5 rounded-md border border-slate-300 bg-white text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleRemove(confirmDb)}
+                  disabled={removing}
+                  className="inline-flex items-center gap-2 rounded-md border border-transparent bg-[#ea2a33] px-3 py-1.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                >
+                  {removing ? (
+                    <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeOpacity="0.25" strokeWidth="3" />
+                      <path d="M21 12a9 9 0 0 1-9 9" stroke="currentColor" strokeWidth="3" />
+                    </svg>
+                  ) : (
+                    <svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor">
+                      <path d="M216,56H168V48a16,16,0,0,0-16-16H104A16,16,0,0,0,88,48v8H40a8,8,0,0,0,0,16H48V208a16,16,0,0,0,16,16H192a16,16,0,0,0,16-16V72h8a8,8,0,0,0,0-16ZM104,48h48v8H104Zm88,160H64V72H192Z" />
+                    </svg>
+                  )}
+                  {removing ? 'Removing…' : 'Remove'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {filterOpen && createPortal(
+        <div className="fixed inset-0 z-[10000] flex items-start justify-end p-4" aria-modal="true" role="dialog">
+          <div className="absolute inset-0 bg-black/20" />
+          <div
+            ref={filterCardRef}
+            className="relative mt-16 mr-8 w/full max-w-md bg-white rounded-xl shadow-lg border border-gray-200 p-4"
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <svg className="text-gray-500" width="20" height="20" viewBox="0 0 256 256" fill="currentColor">
+                <path d="M230.6,49.53A15.81,15.81,0,0,0,216,40H40A16,16,0,0,0,28.19,66.76l.08.09L96,139.17V216a16,16,0,0,0,24.87,13.32l32-21.34A16,16,0,0,0,160,194.66V139.17l67.74-72.32.08-.09A15.8,15.8,0,0,0,230.6,49.53ZM40,56h0Zm108.34,72.28A15.92,15.92,0,0,0,144,139.17v55.49L112,216V139.17a15.92,15.92,0,0,0-4.32-10.94L40,56H216Z" />
+              </svg>
+              <h3 className="text-sm font-semibold text-[#1a1a1a]">Filter databases</h3>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-sm text-[#4d4d4d] block mb-1">Application</label>
+                <select
+                  value={filterApp}
+                  onChange={(e) => setFilterApp(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white"
+                >
+                  <option value="all">All</option>
+                  {apps.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-sm text-[#4d4d4d] block mb-1">Engine</label>
+                <select
+                  value={filterEngine}
+                  onChange={(e) => setFilterEngine(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white"
+                >
+                  <option value="all">All</option>
+                  {engineOptions.map(e => <option key={e} value={e}>{engineLabel(e)}</option>)}
+                </select>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 mt-4">
+              <button
+                type="button"
+                onClick={() => { setFilterApp('all'); setFilterEngine('all') }}
+                className="px-3 py-1.5 rounded-md border border-slate-300 bg-white text-sm"
+              >
+                Reset
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterOpen(false)}
+                className="bg-[#ea2a33] text-white px-4 py-1.5 rounded-md hover:bg-red-700 text-sm"
+              >
+                Apply
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {chooseAppOpen && createPortal(
+        <div className="fixed inset-0 z-[10000]" onClick={() => setChooseAppOpen(false)}>
+          <div className="absolute inset-0 bg-black/30" aria-hidden="true" />
+          <div className="absolute inset-0 flex items-center justify-center p-4">
+            <div className="w-full max-w-sm rounded-xl border border-slate-200 bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+              <div className="px-6 py-4 border-b border-slate-200">
+                <h3 className="text-lg font-bold text-[#1a1a1a]">Select application</h3>
+              </div>
+              <div className="px-6 py-4 space-y-3">
+                <label className="text-sm text-[#4d4d4d]">Application</label>
+                <select
+                  value={createAppId}
+                  onChange={(e) => setCreateAppId(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white"
+                >
+                  <option value="" disabled>Select an application…</option>
+                  {apps.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                </select>
+              </div>
+              <div className="px-6 py-4 flex justify-end gap-2 border-t border-slate-200">
+                <button
+                  className="px-3 py-1.5 rounded-md border border-slate-300 bg-white text-sm"
+                  onClick={() => setChooseAppOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="bg-[#ea2a33] text-white px-4 py-1.5 rounded-md hover:bg-red-700 disabled:opacity-50"
+                  disabled={!createAppId}
+                  onClick={() => { setChooseAppOpen(false); setCreateModalOpen(true) }}
+                >
+                  Continue
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      <DatabaseFormModal
+        isOpen={createModalOpen}
+        mode="create"
+        appId={createAppId}
+        onClose={() => setCreateModalOpen(false)}
+        onSaved={async () => { setCreateModalOpen(false); await load() }}
+      />
+    </div>
+  )
+}

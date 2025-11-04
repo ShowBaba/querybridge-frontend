@@ -39,23 +39,3 @@ export function formatPort(port: number | null): string {
   return port.toString()
 }
 
-/**
- * Calculate pagination info for display
- */
-export function getPaginationInfo(
-  offset: number,
-  limit: number,
-  totalCount: number,
-  currentPageCount: number 
-) {
-  const start = totalCount === 0 ? 0 : offset + 1
-  const end = Math.min(offset + currentPageCount, totalCount) 
-
-  return {
-    start,
-    end,
-    total: totalCount,
-    hasPrevious: offset > 0,
-    hasNext: offset + currentPageCount < totalCount,
-  }
-}

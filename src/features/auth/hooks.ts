@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from './store'
 import { authApi, SignInRequest, SignUpRequest, type SignUpResponseBody, type SignInResponseBody } from './api'
 
-// Auth hooks
 export function useSignIn() {
   const navigate = useNavigate()
   const { login } = useAuthStore()
@@ -11,14 +10,13 @@ export function useSignIn() {
   return useMutation({
     mutationFn: (data: SignInRequest) => authApi.signIn(data),
     onSuccess: (response) => {
-      // Check HTTP status and server body status
       const httpStatus = response.status
       const body = response.data as SignInResponseBody
       if (httpStatus === 200 && body?.status === 200 && body?.data) {
         const token = body.data.token || body.data.access_token
         if (token) {
           login(token, body.data.user)
-          navigate('/applications')
+          navigate('/dashboard')
         }
       }
     },
@@ -30,7 +28,7 @@ export function useSignUp() {
 
   return useMutation({
     mutationFn: (data: SignUpRequest) => authApi.signUp(data),
-    retry: false,                // ✅ never retry POST
+    retry: false,              
     onSuccess: (response) => {
       const httpStatus = response.status
       const body = response.data as SignUpResponseBody
@@ -66,16 +64,13 @@ export function useResendVerification() {
   })
 }
 
-// Placeholder hook to get current user
 export function useCurrentUser() {
   return useQuery({
     queryKey: ['currentUser'],
     queryFn: async () => {
-      // Placeholder implementation
       const token = localStorage.getItem('auth_token')
       if (!token) throw new Error('No token')
 
-      // This would make an API call to get user info
       return {
         id: '1',
         email: 'user@example.com',
