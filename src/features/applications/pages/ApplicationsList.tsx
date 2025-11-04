@@ -117,13 +117,10 @@ export function ApplicationsList() {
   const handlePrevious = () => { if (offset > 0) setOffset(Math.max(0, offset - PAGE_SIZE)) }
   const handleNext = () => { if (offset + PAGE_SIZE < totalCount) setOffset(offset + PAGE_SIZE) }
 
-  const paginationInfo = getPaginationInfo(offset, PAGE_SIZE, totalCount, applications.length)
+  const paginationInfo = getPaginationInfo(offset, PAGE_SIZE, totalCount)
 
   const formatDate = (date: string) =>
     new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-
-  const maskApiKey = (apiKey: string) =>
-    apiKey && apiKey.length > 8 ? `sk-${'•'.repeat(5)}-${apiKey.slice(-4)}` : apiKey
 
   async function copyToClipboard(text: string) {
     try {

@@ -1,82 +1,9 @@
 // dashboard/DashboardPage.tsx
-import { useEffect, useMemo, useState } from 'react' // add useMemo
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AuditNode, fetchAudits, fetchAuditsTotalCount, fetchDashboard, type DashboardResponse } from './api'
 import { ActivityIcon } from './components/ActivityIcon'
 import { Avatar } from './components/Avatar'
-
-/** Inline SVG latency chart (no dependencies) */
-function LatencyChart({
-  points,
-  height = 180,
-  strokeWidth = 2,
-}: {
-  points: { ts: string; p50: number; p95?: number | null }[]
-  height?: number
-  strokeWidth?: number
-}) {
-  const width = 600 // container will scale; svg viewBox handles responsiveness
-  const data = points || []
-  const n = data.length
-
-  const { maxY, p50Path, p95Path } = useMemo(() => {
-    if (!n) return { maxY: 1, p50Path: '', p95Path: '' }
-    const maxCandidate = Math.max(...data.map(d => Math.max(d.p50 ?? 0, d.p95 ?? 0)))
-    const maxY = maxCandidate <= 0 ? 1 : Math.ceil(maxCandidate * 1.1)
-
-    const toPath = (vals: number[]) => {
-      if (vals.length === 0) return ''
-      return vals
-        .map((v, i) => {
-          const x = (i / Math.max(1, n - 1)) * width
-          const y = height - (v / maxY) * height
-          return `${i === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`
-        })
-        .join(' ')
-    }
-
-    const p50Path = toPath(data.map(d => d.p50 ?? 0))
-    const p95Path = toPath(data.map(d => (d.p95 ?? 0)))
-    return { maxY, p50Path, p95Path }
-  }, [data, height, n, width])
-
-  if (!n) {
-    return (
-      <div className="h-44 w-full bg-gray-50 flex items-center justify-center rounded-lg text-gray-400 text-sm">
-        No latency data
-      </div>
-    )
-  }
-
-  return (
-    <div className="w-full">
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-44">
-        {/* gridlines (4) */}
-        {[0.25, 0.5, 0.75, 1].map((t) => (
-          <line key={t} x1="0" x2={width} y1={height * t} y2={height * t} stroke="#e5e7eb" strokeWidth="1" />
-        ))}
-        {/* p95 line (lighter) */}
-        {p95Path && (
-          <path d={p95Path} fill="none" stroke="rgba(239,68,68,0.7)" strokeWidth={strokeWidth} />
-        )}
-        {/* p50 line (primary) */}
-        {p50Path && (
-          <path d={p50Path} fill="none" stroke="#111827" strokeWidth={strokeWidth} />
-        )}
-      </svg>
-      <div className="mt-2 flex gap-4 text-xs text-[#6b7280]">
-        <span className="inline-flex items-center gap-2">
-          <span className="inline-block h-2 w-6 rounded-full" style={{ background: '#111827' }} />
-          P50
-        </span>
-        <span className="inline-flex items-center gap-2">
-          <span className="inline-block h-2 w-6 rounded-full" style={{ background: 'rgba(239,68,68,0.7)' }} />
-          P95
-        </span>
-      </div>
-    </div>
-  )
-}
 
 export default function DashboardPage() {
   const navigate = useNavigate()
@@ -176,7 +103,6 @@ export default function DashboardPage() {
   const s = data?.summary
   const health = data?.systemHealth
   const latency = data?.performance?.latency
-  const latencySeries = latency?.timeseries ?? []
 
   const StatCard = ({
     title, value, delta, trend = 'up', hasTrend = false, subtitle,

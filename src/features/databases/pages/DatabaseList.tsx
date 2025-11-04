@@ -180,7 +180,7 @@ export default function DatabaseList() {
     (endpointsByApp[appId] || []).filter(ep => ep.database_id === databaseId).length
 
   const paginationInfo = useMemo(
-    () => getPaginationInfo(offset, PAGE_SIZE, totalCount, databases.length),
+    () => getPaginationInfo(offset, PAGE_SIZE, totalCount),
     [offset, totalCount, databases.length]
   )
 

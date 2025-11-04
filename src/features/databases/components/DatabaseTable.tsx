@@ -1,4 +1,4 @@
-import type { Database, Endpoint } from '../types'
+import type { Database } from '../types'
 import { formatDate, engineLabel } from '../utils'
 
 type Status = 'checking' | 'up' | 'down' | 'error'

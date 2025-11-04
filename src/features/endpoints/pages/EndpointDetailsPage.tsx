@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useToast } from '@/components/ui/Toast'
 import { DocTooltip } from '../components/DocTooltip' 
@@ -55,14 +55,6 @@ export default function EndpointDetailsPage() {
   const [confirmEp, setConfirmEp] = useState<Endpoint | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
-  const [saved, setSaved] = useState(true)
-  const [beforeRequest, setBeforeRequest] = useState(
-    `function beforeRequest(request, context) {
-  console.log('Executing Before Request Hook');
-  request.headers['X-Custom-Header'] = 'MyValue';
-  return request;
-}`
-  )
   //   const [buildQuery, setBuildQuery] = useState(`// This hook is not defined for this endpoint.\n`)
   //   const [afterQuery, setAfterQuery] = useState(`// This hook is not defined for this endpoint.\n`)
   //   const [beforeResponse, setBeforeResponse] = useState(

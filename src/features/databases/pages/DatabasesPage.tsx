@@ -133,7 +133,7 @@ export function DatabasesPage() {
   const getEndpointCount = (databaseId: string) =>
     endpoints.filter((ep) => ep.database_id === databaseId).length
 
-  const paginationInfo = getPaginationInfo(offset, PAGE_SIZE, totalCount, databases.length)
+  const paginationInfo = getPaginationInfo(offset, PAGE_SIZE, totalCount)
 
   if (loading && databases.length === 0) {
     return (

@@ -18,7 +18,7 @@ export function SchemaViewer({ isOpen, onClose, databaseId, databaseName, appId 
   const [loading, setLoading] = useState(false)
   const [loadingTables, setLoadingTables] = useState<Record<string, boolean>>({})
   const [error, setError] = useState<string | null>(null)
-  const [selectedTableId, setSelectedTableId] = useState<string | null>(null)
+  const [, setSelectedTableId] = useState<string | null>(null)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
@@ -73,14 +73,14 @@ export function SchemaViewer({ isOpen, onClose, databaseId, databaseName, appId 
     return tables.filter(t => (t as any).schema_id === schemaId)
   }
 
-  const handleGenerateEndpoint = () => {
-    console.log('Generate Endpoint clicked', {
-      databaseId,
-      appId,
-      selectedTableId,
-      selectedSchemaId: selectedTableId ? (tables.find(t => t.id === selectedTableId) as any)?.schema_id : null
-    })
-  }
+  // const handleGenerateEndpoint = () => {
+  //   console.log('Generate Endpoint clicked', {
+  //     databaseId,
+  //     appId,
+  //     selectedTableId,
+  //     selectedSchemaId: selectedTableId ? (tables.find(t => t.id === selectedTableId) as any)?.schema_id : null
+  //   })
+  // }
 
 
   // Helpers to pretty-print column metadata from snake_case fields

@@ -467,15 +467,6 @@ export function DatabaseFormModal({
   )
 }
 
-async function safeError(res: Response) {
-  try {
-    const data = await res.json()
-    return data?.message || JSON.stringify(data)
-  } catch {
-    return res.statusText
-  }
-}
-
 function StatusBadge({ state }: { state: 'idle' | 'checking' | 'up' | 'down' | 'error' }) {
   if (state === 'checking') {
     return (

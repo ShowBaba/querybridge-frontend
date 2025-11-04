@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import {
   fetchDatabaseById,
   fetchDatabaseTablesPage,
@@ -620,14 +620,10 @@ export default function DatabaseDetailsPage() {
                 </div>
 
                 {cols.total > 0 && (() => {
-                  const remaining = Math.max(0, cols.total - colsOffset)
-                  const countOnPage = Math.min(COLS_PAGE_SIZE, remaining)
-
                   const info = getPaginationInfo(
                     colsOffset,
                     COLS_PAGE_SIZE,
                     cols.total,
-                    countOnPage
                   )
 
                   return (

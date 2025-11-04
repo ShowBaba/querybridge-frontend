@@ -10,8 +10,7 @@ const PAGE_SIZE = 10;
 export function EndpointsTable({ appId }: { appId: string }) {
   const [endpoints, setEndpoints] = useState<Endpoint[]>([]);
   const [databases, setDatabases] = useState<Database[]>([]);
-  const [totalCount, setTotalCount] = useState(0);
-  const [offset, setOffset] = useState(0);
+  const [offset] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
@@ -22,13 +21,12 @@ export function EndpointsTable({ appId }: { appId: string }) {
     try {
       setLoading(true);
       setError(null);
-      const [epsRes, totalRes, dbsRes] = await Promise.all([
+      const [epsRes, , dbsRes] = await Promise.all([
         fetchEndpoints(appId, PAGE_SIZE, offset),
         fetchEndpointsTotalCount(appId),
         fetchDatabasesPage(appId, { limit: 1000, offset: 0 }),
       ]);
       setEndpoints(epsRes.data.endpoints.nodes);
-      setTotalCount(totalRes.data.endpoints.totalCount);
       setDatabases(dbsRes.data.databases.nodes);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load endpoints');

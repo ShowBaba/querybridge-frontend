@@ -115,7 +115,6 @@ export function ApplicationDetail() {
     auditsOffset,
     AUDITS_PAGE_SIZE,
     auditsTotalCount,
-    audits.length
   )
 
   const handleAuditsPrev = () => {

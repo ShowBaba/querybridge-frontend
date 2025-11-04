@@ -195,7 +195,7 @@ export function EndpointList() {
 
   const pageRows = useMemo(() => filtered.slice(offset, offset + PAGE_SIZE), [filtered, offset])
   const paginationInfo = useMemo(
-    () => getPaginationInfo(offset, PAGE_SIZE, filtered.length, pageRows.length),
+    () => getPaginationInfo(offset, PAGE_SIZE, filtered.length),
     [offset, filtered.length, pageRows.length]
   )
 

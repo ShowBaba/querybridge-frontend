@@ -49,44 +49,44 @@ type Props = {
   onSaved?: (updatedId?: string) => void
 }
 
-function parseHelpfulHints(msg: string): string[] {
-  const hints: string[] = []
-  if (/NOT NULL column/i.test(msg)) {
-    hints.push('Add the missing field(s) to the Body Schema and mark as “Required”, or provide them via Path/Query schema.')
-  }
-  if (/body_schema/i.test(msg) || /query_schema/i.test(msg) || /param_schema/i.test(msg)) {
-    hints.push('Open “Additional optional settings” and review the corresponding schema builder or switch to Raw JSON.')
-  }
-  if (/endpoint definition invalid/i.test(msg)) {
-    hints.push('Check method, path, and selected columns. Preview SQL to validate the generated query.')
-  }
-  return hints
-}
+// function parseHelpfulHints(msg: string): string[] {
+//   const hints: string[] = []
+//   if (/NOT NULL column/i.test(msg)) {
+//     hints.push('Add the missing field(s) to the Body Schema and mark as "Required", or provide them via Path/Query schema.')
+//   }
+//   if (/body_schema/i.test(msg) || /query_schema/i.test(msg) || /param_schema/i.test(msg)) {
+//     hints.push('Open "Additional optional settings" and review the corresponding schema builder or switch to Raw JSON.')
+//   }
+//   if (/endpoint definition invalid/i.test(msg)) {
+//     hints.push('Check method, path, and selected columns. Preview SQL to validate the generated query.')
+//   }
+//   return hints
+// }
 
-function ErrorCallout({ title = 'Something went wrong', message, hints }: {
-  title?: string
-  message: string
-  hints?: string[]
-}) {
-  return (
-    <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-      <div className="flex items-start gap-2">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="mt-[2px]">
-          <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2V8h2v6z" />
-        </svg>
-        <div className="min-w-0">
-          <div className="font-semibold">{title}</div>
-          <div className="mt-1 break-words">{message}</div>
-          {hints && hints.length > 0 && (
-            <ul className="mt-2 list-disc pl-5 space-y-1">
-              {hints.map((h, i) => <li key={i}>{h}</li>)}
-            </ul>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
+// function ErrorCallout({ title = 'Something went wrong', message, hints }: {
+//   title?: string
+//   message: string
+//   hints?: string[]
+// }) {
+//   return (
+//     <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+//       <div className="flex items-start gap-2">
+//         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="mt-[2px]">
+//           <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2V8h2v6z" />
+//         </svg>
+//         <div className="min-w-0">
+//           <div className="font-semibold">{title}</div>
+//           <div className="mt-1 break-words">{message}</div>
+//           {hints && hints.length > 0 && (
+//             <ul className="mt-2 list-disc pl-5 space-y-1">
+//               {hints.map((h, i) => <li key={i}>{h}</li>)}
+//             </ul>
+//           )}
+//         </div>
+//       </div>
+//     </div>
+//   )
+// }
 
 
 type FieldType = 'string' | 'number' | 'integer' | 'boolean' | 'object' | 'array'
@@ -125,9 +125,9 @@ function jsonSchemaToBuilder(json?: any): BuilderRow[] {
   }
 }
 
-const fieldControl =
-  "w-full h-10 px-3 rounded-lg border border-gray-200 bg-white text-sm leading-[1.25rem] " +
-  "focus:outline-none focus:ring-2 focus:ring-[#ec1313]/40 focus:border-[#ec1313]";
+// const fieldControl =
+//   "w-full h-10 px-3 rounded-lg border border-gray-200 bg-white text-sm leading-[1.25rem] " +
+//   "focus:outline-none focus:ring-2 focus:ring-[#ec1313]/40 focus:border-[#ec1313]";
 
 function SchemaBuilder({
   rows,
@@ -262,7 +262,6 @@ export function EndpointFormModal({
   onSaved,
 }: Props) {
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
   const [databases, setDatabases] = useState<Array<{ id: string; name: string }>>([])
   const [dbId, setDbId] = useState<string>('')
@@ -672,7 +671,6 @@ export function EndpointFormModal({
   const submit = async () => {
     if (!canSubmit) return
     setSaving(true)
-    setError(null)
     setFormError(null)
 
     try {

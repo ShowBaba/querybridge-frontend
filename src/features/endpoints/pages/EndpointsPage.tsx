@@ -56,7 +56,7 @@ export function EndpointsPage() {
     return m
   }, [databases])
 
-  const paginationInfo = getPaginationInfo(offset, PAGE_SIZE, totalCount, endpoints.length)
+  const paginationInfo = getPaginationInfo(offset, PAGE_SIZE, totalCount)
 
   if (loading && endpoints.length === 0) {
     return (

@@ -282,15 +282,6 @@ export async function previewEndpointSQL(payload: Partial<CreateEndpointPayload 
   return res.json()
 }
 
-async function safeErr(res: Response) {
-  try {
-    const j = await res.json()
-    return j?.message || JSON.stringify(j)
-  } catch {
-    return res.statusText
-  }
-}
-
 export async function deleteEndpoint(id: string) {
   const token = await getAuthToken()
   const res = await fetch(`${API_BASE_URL}/endpoint/${id}/delete`, {

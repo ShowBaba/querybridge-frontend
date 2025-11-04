@@ -27,7 +27,6 @@ export function formatRelativeTime(date: string | Date) {
  */
 export function getPaginationInfo(
   offset: number,
-  limit: number,
   totalCount: number,
   currentPageCount: number
 ) {
