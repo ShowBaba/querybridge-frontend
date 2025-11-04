@@ -1,5 +1,6 @@
 import { type ClassValue, clsx } from 'clsx'
 import { format, parseISO } from 'date-fns'
+import { config } from '@/app/config'
 
 export function cn(...inputs: ClassValue[]) {
   return clsx(inputs)
@@ -42,7 +43,7 @@ export function getPaginationInfo(
   }
 }
 
-const GRAPHQL_ENDPOINT = 'http://localhost:4000/gql'
+const GRAPHQL_ENDPOINT = config.gqlBaseURL
 
 async function getAuthToken(): Promise<string> {
   const token = localStorage.getItem('qb_token')

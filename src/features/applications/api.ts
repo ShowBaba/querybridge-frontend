@@ -1,8 +1,9 @@
 import { getAuthToken } from '@/lib/http';
 import { makeGraphQLRequest } from '@/lib/utils';
 import { ApplicationDetailResponse, ApplicationsResponse, DatabaseCountResponse, EndpointCountResponse } from './types'
+import { config } from '@/app/config'
 
-const GRAPHQL_ENDPOINT = 'http://localhost:4000/gql'
+const GRAPHQL_ENDPOINT = config.gqlBaseURL
 
 export async function fetchApplicationsPage(pagination: { limit: number; offset: number }): Promise<ApplicationsResponse> {
   const query = `
