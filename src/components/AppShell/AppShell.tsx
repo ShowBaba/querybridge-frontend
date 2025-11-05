@@ -17,10 +17,10 @@ export function AppShell() {
   useEffect(() => {
     const path = location.pathname
     const key =
-      path.startsWith('/applications') ? 'applications' :
-        path.startsWith('/databases') ? 'databases' :
-          path.startsWith('/endpoints') ? 'endpoints' :
-            path.startsWith('/settings') ? 'settings' :
+      path.startsWith('/app/applications') || path.startsWith('/applications') ? 'applications' :
+        path.startsWith('/app/databases') || path.startsWith('/databases') ? 'databases' :
+          path.startsWith('/app/endpoints') || path.startsWith('/endpoints') ? 'endpoints' :
+            path.startsWith('/app/settings') || path.startsWith('/settings') ? 'settings' :
               'dashboard'
 
     const el = itemRefs.current[key]
@@ -80,7 +80,7 @@ export function AppShell() {
             />
 
             <NavLink
-              to="/dashboard"
+              to="dashboard"
               ref={(el) => (itemRefs.current.dashboard = el)}
               className={navClass}
               end
@@ -92,7 +92,7 @@ export function AppShell() {
             </NavLink>
 
             <NavLink
-              to="/applications"
+              to="applications"
               ref={(el) => (itemRefs.current.applications = el)}
               className={navClass}
             >
@@ -103,7 +103,7 @@ export function AppShell() {
             </NavLink>
 
             <NavLink
-              to="/databases"
+              to="databases"
               ref={(el) => (itemRefs.current.databases = el)}
               className={navClass}
             >
@@ -114,7 +114,7 @@ export function AppShell() {
             </NavLink>
 
             <NavLink
-              to="/endpoints"
+              to="endpoints"
               ref={(el) => (itemRefs.current.endpoints = el)}
               className={navClass}
             >
@@ -125,7 +125,7 @@ export function AppShell() {
             </NavLink>
 
             <NavLink
-              to="/settings"
+              to="settings"
               ref={(el) => (itemRefs.current.settings = el)}
               className={navClass}
             >

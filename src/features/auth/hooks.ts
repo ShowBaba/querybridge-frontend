@@ -16,7 +16,7 @@ export function useSignIn() {
         const token = body.data.token || body.data.access_token
         if (token) {
           login(token, body.data.user)
-          navigate('/dashboard')
+          navigate('/app/dashboard')
         }
       }
     },

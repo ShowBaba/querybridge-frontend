@@ -47,9 +47,13 @@ export const router = createBrowserRouter([
     path: '/verify-email',
     element: <VerifyEmail />,
   },
-  // Protected routes
   {
     path: '/',
+    element: <Navigate to="/landing" replace />,
+  },
+  // Protected routes
+  {
+    path: '/app',
     element: (
       <AuthGuard>
         <AppShell />
@@ -58,7 +62,7 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <Navigate to="/dashboard" replace />,
+        element: <Navigate to="/app/dashboard" replace />,
       },
       {
         path: 'dashboard',
