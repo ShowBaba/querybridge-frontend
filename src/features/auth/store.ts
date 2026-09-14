@@ -1,4 +1,4 @@
-import { scheduleAutoLogout, setToken } from '@/lib/auth'
+import { clearToken, scheduleAutoLogout, setToken } from '@/lib/auth'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
@@ -30,7 +30,7 @@ export const useAuthStore = create<AuthState>()(
         set({ token, user, isAuthenticated: true })
       },
       logout: () => {
-        localStorage.removeItem('qb_token')
+        clearToken()
         set({ token: null, user: null, isAuthenticated: false })
       },
       setUser: (user: User) => set({ user }),

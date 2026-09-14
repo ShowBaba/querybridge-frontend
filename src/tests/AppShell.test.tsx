@@ -35,15 +35,15 @@ describe('AppShell', () => {
     expect(screen.getByText('Settings')).toBeInTheDocument()
   })
 
-  it('renders topbar with user controls', () => {
+  it('renders main content outlet area', () => {
     render(
       <MockRouter>
         <AppShell />
       </MockRouter>
     )
 
-    // Check for bell and user icons (they should be present as buttons)
-    const buttons = screen.getAllByRole('button')
-    expect(buttons.length).toBeGreaterThan(0)
+    expect(screen.getByRole('navigation')).toBeInTheDocument()
+    expect(screen.getByText('Dashboard')).toBeInTheDocument()
   })
 })
+

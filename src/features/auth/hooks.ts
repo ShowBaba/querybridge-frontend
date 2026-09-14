@@ -16,7 +16,7 @@ export function useSignIn() {
         const token = body.data.token || body.data.access_token
         if (token) {
           login(token, body.data.user)
-          navigate('/app/dashboard')
+          navigate('/dashboard')
         }
       }
     },
@@ -68,7 +68,7 @@ export function useCurrentUser() {
   return useQuery({
     queryKey: ['currentUser'],
     queryFn: async () => {
-      const token = localStorage.getItem('auth_token')
+      const token = localStorage.getItem('qb_token')
       if (!token) throw new Error('No token')
 
       return {
@@ -77,6 +77,6 @@ export function useCurrentUser() {
         name: 'John Doe',
       }
     },
-    enabled: !!localStorage.getItem('auth_token'),
+    enabled: !!localStorage.getItem('qb_token'),
   })
 }

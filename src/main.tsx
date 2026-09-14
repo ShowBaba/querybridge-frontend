@@ -5,6 +5,7 @@ import { Toaster } from 'react-hot-toast'
 
 import App from './App'
 import { queryClient } from './app/queryClient'
+import { ToastProvider } from './components/ui/Toast'
 import './index.css'
 import { scheduleAutoLogout } from './lib/auth'
 
@@ -13,7 +14,9 @@ scheduleAutoLogout()
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <App />
+      <ToastProvider>
+        <App />
+      </ToastProvider>
       <Toaster position="top-right" />
     </QueryClientProvider>
   </React.StrictMode>,

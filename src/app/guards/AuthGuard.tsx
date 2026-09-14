@@ -1,28 +1,31 @@
 import { Navigate, useNavigate } from 'react-router-dom'
-import { useEffect, useSyncExternalStore, useRef } from 'react'
-import { isAuthenticated, registerAuthStorageListener, scheduleAutoLogout } from '@/lib/auth'
+import { useEffect, useSyncExternalStore } from 'react'
+import { AUTH_CHANGE_EVENT, isAuthenticated, registerAuthStorageListener, scheduleAutoLogout } from '@/lib/auth'
 
 interface AuthGuardProps {
   children: React.ReactNode
 }
 
 function subscribe(callback: () => void) {
-  const handler = () => callback()
-  window.addEventListener('storage', handler)
-  return () => window.removeEventListener('storage', handler)
+  const onStorage = () => callback()
+  const onAuthChange = () => callback()
+  window.addEventListener('storage', onStorage)
+  window.addEventListener(AUTH_CHANGE_EVENT, onAuthChange)
+  return () => {
+    window.removeEventListener('storage', onStorage)
+    window.removeEventListener(AUTH_CHANGE_EVENT, onAuthChange)
+  }
 }
 function getSnapshot() { return isAuthenticated() }
-function getServerSnapshot() { return true }
+function getServerSnapshot() { return false }
 
 export function AuthGuard({ children }: AuthGuardProps) {
   const navigate = useNavigate()
   const ok = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
-  const mounted = useRef(false)
 
   useEffect(() => {
     scheduleAutoLogout()
-    registerAuthStorageListener(() => navigate('/signin', { replace: true }))
-    mounted.current = true
+    return registerAuthStorageListener(() => navigate('/signin', { replace: true }))
   }, [navigate])
 
   if (!ok) {

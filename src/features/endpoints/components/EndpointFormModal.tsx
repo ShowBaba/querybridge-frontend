@@ -454,7 +454,9 @@ export function EndpointFormModal({
     ; (async () => {
       try {
         const res = await fetchTablesByDatabaseId(String(dbId))
-        const list = res?.data?.tables?.nodes ?? []
+        const list = [...(res?.data?.tables?.nodes ?? [])].sort((a, b) =>
+          a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+        )
         setTables(list)
 
         if (mode === 'create' && list.length && !tableId) setTableId(list[0].id)

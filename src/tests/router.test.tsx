@@ -38,7 +38,7 @@ describe('Router', () => {
       </TestWrapper>
     )
 
-    expect(screen.getByText('Create your account')).toBeInTheDocument()
+    expect(screen.getByText('Create an account to get started.')).toBeInTheDocument()
   })
 
   it('renders forgot password page at /forgot-password', () => {

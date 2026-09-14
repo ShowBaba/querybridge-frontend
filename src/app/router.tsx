@@ -21,6 +21,7 @@ import EndpointDetailsPage from '@/features/endpoints/pages/EndpointDetailsPage'
 import DatabaseList from '@/features/databases/pages/DatabaseList'
 import DashboardPage from '@/features/dashboard/DashboardPage'
 import { EndpointList } from '@/features/endpoints/pages/EndpointList'
+import SettingsPage from '@/features/settings/pages/SettingsPage'
 
 export const router = createBrowserRouter([
   {
@@ -47,13 +48,14 @@ export const router = createBrowserRouter([
     path: '/verify-email',
     element: <VerifyEmail />,
   },
+  // Legacy /app/* bookmarks → new paths
   {
-    path: '/',
-    element: <Navigate to="/landing" replace />,
+    path: '/app/*',
+    element: <Navigate to="/dashboard" replace />,
   },
   // Protected routes
   {
-    path: '/app',
+    path: '/',
     element: (
       <AuthGuard>
         <AppShell />
@@ -62,7 +64,7 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <Navigate to="/app/dashboard" replace />,
+        element: <Navigate to="/dashboard" replace />,
       },
       {
         path: 'dashboard',
@@ -79,6 +81,10 @@ export const router = createBrowserRouter([
       {
         path: 'endpoints',
         element: <EndpointList />,
+      },
+      {
+        path: 'settings',
+        element: <SettingsPage />,
       },
       {
         path: 'applications/:appId',

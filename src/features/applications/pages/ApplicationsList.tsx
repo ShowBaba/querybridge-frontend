@@ -41,7 +41,7 @@ export function ApplicationsList() {
   const [editError, setEditError] = useState<string | null>(null)
 
   const [searchTerm, setSearchTerm] = useState('')
-  const [typingTimeout, setTypingTimeout] = useState<NodeJS.Timeout | null>(null)
+  const skipSearchEffect = useRef(true)
 
   useEffect(() => {
     function onDown(e: MouseEvent) {
@@ -57,7 +57,11 @@ export function ApplicationsList() {
   useEffect(() => { load() }, [offset])
 
   useEffect(() => {
-    if (typingTimeout) clearTimeout(typingTimeout)
+    // Skip the initial mount — offset effect already loads the list
+    if (skipSearchEffect.current) {
+      skipSearchEffect.current = false
+      return
+    }
 
     const timeout = setTimeout(async () => {
       if (searchTerm.trim() === '') {
@@ -74,9 +78,9 @@ export function ApplicationsList() {
           setLoading(false)
         }
       }
-    }, 400) // debounce 400ms
+    }, 400)
 
-    setTypingTimeout(timeout)
+    return () => clearTimeout(timeout)
   }, [searchTerm])
 
   useEffect(() => {
@@ -287,8 +291,8 @@ export function ApplicationsList() {
 
         {/* Cards / Empty state */}
         <div className="min-h-[12rem]">
-          {/* Loading skeletons */}
-          {loading && (
+          {/* Loading skeletons — only when there is no existing data to keep on screen */}
+          {loading && applications.length === 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {Array.from({ length: PAGE_SIZE }).map((_, i) => (
                 <div key={i} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 animate-pulse h-40" />
@@ -343,8 +347,8 @@ export function ApplicationsList() {
             </div>
           )}
 
-          {/* Cards grid (normal state) */}
-          {!loading && applications.length > 0 && (
+          {/* Cards grid — keep visible while refreshing so navigation/search doesn't blink */}
+          {applications.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {applications.map((app) => {
                 const isCopied = copiedId === app.id

@@ -44,7 +44,7 @@ export default function DatabaseList() {
   const [removing, setRemoving] = useState(false)
 
   const [searchTerm, setSearchTerm] = useState('')
-  const [typingTimeout, setTypingTimeout] = useState<NodeJS.Timeout | null>(null)
+  const skipSearchEffect = useRef(true)
 
   const [chooseAppOpen, setChooseAppOpen] = useState(false)
   const [createModalOpen, setCreateModalOpen] = useState(false)
@@ -101,7 +101,12 @@ export default function DatabaseList() {
   useEffect(() => { load() }, [offset])
 
   useEffect(() => {
-    if (typingTimeout) clearTimeout(typingTimeout)
+    // Skip the initial mount — offset effect already loads the list
+    if (skipSearchEffect.current) {
+      skipSearchEffect.current = false
+      return
+    }
+
     const timeout = setTimeout(async () => {
       if (!searchTerm.trim()) {
         await load()
@@ -119,7 +124,8 @@ export default function DatabaseList() {
         setLoading(false)
       }
     }, 400)
-    setTypingTimeout(timeout)
+
+    return () => clearTimeout(timeout)
   }, [searchTerm])
 
   useEffect(() => {

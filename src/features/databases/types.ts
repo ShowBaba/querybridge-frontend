@@ -7,7 +7,7 @@ export type Database = {
   port: number | null
   database: string
   username: string
-  password: string
+  password?: string
   application_id: string
   created_at: string
   updated_at: string

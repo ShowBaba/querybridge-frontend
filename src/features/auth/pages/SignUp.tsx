@@ -115,7 +115,7 @@ export function SignUp() {
     <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-gray-50 py-6 sm:py-12">
       <div className="w-full max-w-lg px-4">
         <div className="mb-8 text-center">
-          <Link className="flex items-center justify-center gap-2" to="/">
+          <Link className="flex items-center justify-center gap-2" to="/landing">
             <svg className="h-8 w-8 text-[#ec1313]" fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
               <path d="M4 4H17.3334V17.3334H30.6666V30.6666H44V44H4V4Z" fill="currentColor"></path>
             </svg>
@@ -333,7 +333,7 @@ export function SignUp() {
         </p>
 
         <div className="mt-8 text-center text-xs text-gray-500">
-          <Link className="hover:underline" to="/">Home</Link>
+          <Link className="hover:underline" to="/landing">Home</Link>
           <span className="mx-2">·</span>
           <a className="hover:underline" href="#">Docs</a>
           <span className="mx-2">·</span>

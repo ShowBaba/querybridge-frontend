@@ -10,7 +10,8 @@ export type DatabasePayload = {
   port: number | string
   database: string
   username: string
-  password: string
+  /** Optional — local DBs often use trust/peer auth with no password */
+  password?: string
   db_engine: 'postgres' | 'mysql' | 'sqlite'
   ssl_mode: 'disable' | 'require' | 'verify-ca' | 'verify-full'
 }
@@ -65,6 +66,7 @@ export function DatabaseFormModal({
 
   const canSubmit = useMemo(() => {
     const { name, host, port, database, username, db_engine } = values
+    // Password intentionally optional — local DBs may use trust/peer auth
     return !!name && !!host && !!database && !!username && !!db_engine && String(port).trim() !== ''
   }, [values])
 
@@ -76,7 +78,12 @@ export function DatabaseFormModal({
     setSaving(true)
     setError(null)
     try {
-      const payload = { ...values, port: Number(values.port) }
+      const payload = {
+        ...values,
+        port: Number(values.port),
+        username: values.username ?? '',
+        password: values.password ?? '',
+      }
 
       if (mode === 'create' && appId) {
         await createDatabase(appId, payload)
@@ -110,7 +117,7 @@ export function DatabaseFormModal({
         port: Number(values.port),
         database: values.database,
         username: values.username,
-        password: values.password,
+        password: values.password ?? '',
         db_engine: values.db_engine,
         ssl_mode: values.ssl_mode,
       })
@@ -293,13 +300,15 @@ export function DatabaseFormModal({
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-[#111827]" htmlFor="password">
-                        Password
+                        Password <span className="font-normal text-[#9ca3af]">(optional)</span>
                       </label>
                       <input
                         id="password"
                         type="password"
-                        value={values.password}
+                        value={values.password ?? ''}
                         onChange={(e) => set({ password: e.target.value })}
+                        placeholder="Leave blank for local / trust auth"
+                        autoComplete="new-password"
                         className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg placeholder:text-[#9ca3af] text-[#111827] focus:ring-2 focus:ring-[#ec1313]/50 focus:border-[#ec1313]"
                       />
                     </div>
